@@ -170,6 +170,8 @@ def generate_audio(
 
     for chunk in text_chunks:
 
+        print(text_chunks)
+
         with Timer('cond_dict'):
             cond_dict = make_cond_dict(
                 text=chunk,
@@ -186,6 +188,10 @@ def generate_audio(
                 unconditional_keys=unconditional_keys,
             )
             conditioning = selected_model.prepare_conditioning(cond_dict)
+
+        print(type(conditioning))
+        if isinstance(conditioning, torch.Tensor):
+            print(conditioning.shape)
 
         estimated_generation_duration = 30 * len(chunk) / 400
         estimated_total_steps = int(estimated_generation_duration * 86)

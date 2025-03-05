@@ -12,7 +12,7 @@ speaker = model.make_speaker_embedding(wav, sampling_rate)
 
 torch.manual_seed(421)
 
-cond_dict = make_cond_dict(text="Hello, world!", speaker=speaker, language="en-us")
+cond_dict = make_cond_dict(text="Hi, I am Kai from FlashIntel. I am reaching out because we found that you have visited our website recently. Are you available for a quick chat?", speaker=speaker, language="en-us")
 conditioning = model.prepare_conditioning(cond_dict)
 
 codes = model.generate(conditioning)

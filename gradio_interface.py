@@ -160,7 +160,7 @@ def generate_audio(
     vq_val = float(vq_single)
     vq_tensor = torch.tensor([vq_val] * 8, device=device).unsqueeze(0)
 
-    def split_text(text, chunk_size=100):
+    def split_text(text, chunk_size=20):
         """
         将文本分割成小块，每个块最多 chunk_size 个字符。
         """

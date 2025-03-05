@@ -160,47 +160,57 @@ def generate_audio(
     vq_val = float(vq_single)
     vq_tensor = torch.tensor([vq_val] * 8, device=device).unsqueeze(0)
 
-    with Timer('cond_dict'):
-        cond_dict = make_cond_dict(
-            text=text,
-            language=language,
-            speaker=SPEAKER_EMBEDDING,
-            emotion=emotion_tensor,
-            vqscore_8=vq_tensor,
-            fmax=fmax,
-            pitch_std=pitch_std,
-            speaking_rate=speaking_rate,
-            dnsmos_ovrl=dnsmos_ovrl,
-            speaker_noised=speaker_noised_bool,
-            device=device,
-            unconditional_keys=unconditional_keys,
-        )
-        conditioning = selected_model.prepare_conditioning(cond_dict)
+    def split_text(text, chunk_size=100):
+        """
+        将文本分割成小块，每个块最多 chunk_size 个字符。
+        """
+        return [text[i:i+chunk_size] for i in range(0, len(text), chunk_size)]
+    
+    text_chunks = split_text(text)
 
-    estimated_generation_duration = 30 * len(text) / 400
-    estimated_total_steps = int(estimated_generation_duration * 86)
+    for chunk in text_chunks:
 
-    def update_progress(_frame: torch.Tensor, step: int, _total_steps: int) -> bool:
-        progress((step, estimated_total_steps))
-        return True
+        with Timer('cond_dict'):
+            cond_dict = make_cond_dict(
+                text=chunk,
+                language=language,
+                speaker=SPEAKER_EMBEDDING,
+                emotion=emotion_tensor,
+                vqscore_8=vq_tensor,
+                fmax=fmax,
+                pitch_std=pitch_std,
+                speaking_rate=speaking_rate,
+                dnsmos_ovrl=dnsmos_ovrl,
+                speaker_noised=speaker_noised_bool,
+                device=device,
+                unconditional_keys=unconditional_keys,
+            )
+            conditioning = selected_model.prepare_conditioning(cond_dict)
 
-    with Timer('generate'):
-        codes = selected_model.generate(
-            prefix_conditioning=conditioning,
-            audio_prefix_codes=audio_prefix_codes,
-            max_new_tokens=max_new_tokens,
-            cfg_scale=cfg_scale,
-            batch_size=1,
-            sampling_params=dict(top_p=top_p, top_k=top_k, min_p=min_p, linear=linear, conf=confidence, quad=quadratic),
-            callback=update_progress,
-        )
+        estimated_generation_duration = 30 * len(chunk) / 400
+        estimated_total_steps = int(estimated_generation_duration * 86)
+
+        def update_progress(_frame: torch.Tensor, step: int, _total_steps: int) -> bool:
+            progress((step, estimated_total_steps))
+            return True
+
+        with Timer('generate'):
+            codes = selected_model.generate(
+                prefix_conditioning=conditioning,
+                audio_prefix_codes=audio_prefix_codes,
+                max_new_tokens=max_new_tokens,
+                cfg_scale=cfg_scale,
+                batch_size=1,
+                sampling_params=dict(top_p=top_p, top_k=top_k, min_p=min_p, linear=linear, conf=confidence, quad=quadratic),
+                callback=update_progress,
+            )
 
         with Timer('decode'):
             wav_out = selected_model.autoencoder.decode(codes).cpu().detach()
             sr_out = selected_model.autoencoder.sampling_rate
             if wav_out.dim() == 2 and wav_out.size(0) > 1:
                 wav_out = wav_out[0:1, :]
-    return (sr_out, wav_out.squeeze().numpy())
+        yield (sr_out, wav_out.squeeze().numpy())
 
 
 def build_interface():

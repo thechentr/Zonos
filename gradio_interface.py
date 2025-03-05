@@ -6,6 +6,7 @@ from os import getenv
 from zonos.model import Zonos, DEFAULT_BACKBONE_CLS as ZonosBackbone
 from zonos.conditioning import make_cond_dict, supported_language_codes
 from zonos.utils import DEFAULT_DEVICE as device
+from timer import Timer
 
 CURRENT_MODEL_TYPE = None
 CURRENT_MODEL = None
@@ -109,8 +110,6 @@ def generate_audio(
     linear,
     confidence,
     quadratic,
-    seed,
-    randomize_seed,
     unconditional_keys,
     progress=gr.Progress(),
 ):
@@ -118,7 +117,8 @@ def generate_audio(
     Generates audio based on the provided UI parameters.
     We do NOT use language_id or ctc_loss even if the model has them.
     """
-    selected_model = load_model_if_needed(model_choice)
+    with Timer('load model'):
+        selected_model = load_model_if_needed(model_choice)
 
     speaker_noised_bool = bool(speaker_noised)
     fmax = float(fmax)
@@ -132,52 +132,50 @@ def generate_audio(
     linear = float(linear)
     confidence = float(confidence)
     quadratic = float(quadratic)
-    seed = int(seed)
     max_new_tokens = 86 * 30
 
     # This is a bit ew, but works for now.
     global SPEAKER_AUDIO_PATH, SPEAKER_EMBEDDING
 
-    if randomize_seed:
-        seed = torch.randint(0, 2**32 - 1, (1,)).item()
-    torch.manual_seed(seed)
+    with Timer('speaker_audio'):
+        if speaker_audio is not None and "speaker" not in unconditional_keys:
+            if speaker_audio != SPEAKER_AUDIO_PATH:
+                print("Recomputed speaker embedding")
+                wav, sr = torchaudio.load(speaker_audio)
+                SPEAKER_EMBEDDING = selected_model.make_speaker_embedding(wav, sr)
+                SPEAKER_EMBEDDING = SPEAKER_EMBEDDING.to(device, dtype=torch.bfloat16)
+                SPEAKER_AUDIO_PATH = speaker_audio
 
-    if speaker_audio is not None and "speaker" not in unconditional_keys:
-        if speaker_audio != SPEAKER_AUDIO_PATH:
-            print("Recomputed speaker embedding")
-            wav, sr = torchaudio.load(speaker_audio)
-            SPEAKER_EMBEDDING = selected_model.make_speaker_embedding(wav, sr)
-            SPEAKER_EMBEDDING = SPEAKER_EMBEDDING.to(device, dtype=torch.bfloat16)
-            SPEAKER_AUDIO_PATH = speaker_audio
-
-    audio_prefix_codes = None
-    if prefix_audio is not None:
-        wav_prefix, sr_prefix = torchaudio.load(prefix_audio)
-        wav_prefix = wav_prefix.mean(0, keepdim=True)
-        wav_prefix = selected_model.autoencoder.preprocess(wav_prefix, sr_prefix)
-        wav_prefix = wav_prefix.to(device, dtype=torch.float32)
-        audio_prefix_codes = selected_model.autoencoder.encode(wav_prefix.unsqueeze(0))
+    with Timer('prefix_audio'):
+        audio_prefix_codes = None
+        if prefix_audio is not None:
+            wav_prefix, sr_prefix = torchaudio.load(prefix_audio)
+            wav_prefix = wav_prefix.mean(0, keepdim=True)
+            wav_prefix = selected_model.autoencoder.preprocess(wav_prefix, sr_prefix)
+            wav_prefix = wav_prefix.to(device, dtype=torch.float32)
+            audio_prefix_codes = selected_model.autoencoder.encode(wav_prefix.unsqueeze(0))
 
     emotion_tensor = torch.tensor(list(map(float, [e1, e2, e3, e4, e5, e6, e7, e8])), device=device)
 
     vq_val = float(vq_single)
     vq_tensor = torch.tensor([vq_val] * 8, device=device).unsqueeze(0)
 
-    cond_dict = make_cond_dict(
-        text=text,
-        language=language,
-        speaker=SPEAKER_EMBEDDING,
-        emotion=emotion_tensor,
-        vqscore_8=vq_tensor,
-        fmax=fmax,
-        pitch_std=pitch_std,
-        speaking_rate=speaking_rate,
-        dnsmos_ovrl=dnsmos_ovrl,
-        speaker_noised=speaker_noised_bool,
-        device=device,
-        unconditional_keys=unconditional_keys,
-    )
-    conditioning = selected_model.prepare_conditioning(cond_dict)
+    with Timer('cond_dict'):
+        cond_dict = make_cond_dict(
+            text=text,
+            language=language,
+            speaker=SPEAKER_EMBEDDING,
+            emotion=emotion_tensor,
+            vqscore_8=vq_tensor,
+            fmax=fmax,
+            pitch_std=pitch_std,
+            speaking_rate=speaking_rate,
+            dnsmos_ovrl=dnsmos_ovrl,
+            speaker_noised=speaker_noised_bool,
+            device=device,
+            unconditional_keys=unconditional_keys,
+        )
+        conditioning = selected_model.prepare_conditioning(cond_dict)
 
     estimated_generation_duration = 30 * len(text) / 400
     estimated_total_steps = int(estimated_generation_duration * 86)
@@ -186,21 +184,23 @@ def generate_audio(
         progress((step, estimated_total_steps))
         return True
 
-    codes = selected_model.generate(
-        prefix_conditioning=conditioning,
-        audio_prefix_codes=audio_prefix_codes,
-        max_new_tokens=max_new_tokens,
-        cfg_scale=cfg_scale,
-        batch_size=1,
-        sampling_params=dict(top_p=top_p, top_k=top_k, min_p=min_p, linear=linear, conf=confidence, quad=quadratic),
-        callback=update_progress,
-    )
+    with Timer('generate'):
+        codes = selected_model.generate(
+            prefix_conditioning=conditioning,
+            audio_prefix_codes=audio_prefix_codes,
+            max_new_tokens=max_new_tokens,
+            cfg_scale=cfg_scale,
+            batch_size=1,
+            sampling_params=dict(top_p=top_p, top_k=top_k, min_p=min_p, linear=linear, conf=confidence, quad=quadratic),
+            callback=update_progress,
+        )
 
-    wav_out = selected_model.autoencoder.decode(codes).cpu().detach()
-    sr_out = selected_model.autoencoder.sampling_rate
-    if wav_out.dim() == 2 and wav_out.size(0) > 1:
-        wav_out = wav_out[0:1, :]
-    return (sr_out, wav_out.squeeze().numpy()), seed
+        with Timer('decode'):
+            wav_out = selected_model.autoencoder.decode(codes).cpu().detach()
+            sr_out = selected_model.autoencoder.sampling_rate
+            if wav_out.dim() == 2 and wav_out.size(0) > 1:
+                wav_out = wav_out[0:1, :]
+    return (sr_out, wav_out.squeeze().numpy())
 
 
 def build_interface():
@@ -261,8 +261,6 @@ def build_interface():
             with gr.Column():
                 gr.Markdown("## Generation Parameters")
                 cfg_scale_slider = gr.Slider(1.0, 5.0, 2.0, 0.1, label="CFG Scale")
-                seed_number = gr.Number(label="Seed", value=420, precision=0)
-                randomize_seed_toggle = gr.Checkbox(label="Randomize Seed (before generation)", value=True)
 
         with gr.Accordion("Sampling", open=False):
             with gr.Row():
@@ -403,11 +401,9 @@ def build_interface():
                 linear_slider,
                 confidence_slider,
                 quadratic_slider,
-                seed_number,
-                randomize_seed_toggle,
                 unconditional_keys,
             ],
-            outputs=[output_audio, seed_number],
+            outputs=[output_audio],
         )
 
     return demo

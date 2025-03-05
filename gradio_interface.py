@@ -7,6 +7,7 @@ from zonos.model import Zonos, DEFAULT_BACKBONE_CLS as ZonosBackbone
 from zonos.conditioning import make_cond_dict, supported_language_codes
 from zonos.utils import DEFAULT_DEVICE as device
 from timer import Timer
+import numpy as np
 
 CURRENT_MODEL_TYPE = None
 CURRENT_MODEL = None
@@ -216,9 +217,8 @@ def generate_audio(
             sr_out = selected_model.autoencoder.sampling_rate
             if wav_out.dim() == 2 and wav_out.size(0) > 1:
                 wav_out = wav_out[0:1, :]
-            print(wav_out.squeeze().numpy().shape)
-        yield (sr_out, wav_out.squeeze().numpy())
-
+            wav_out = np.expand_dims(wav_out.squeeze().numpy(), axis=-1)  # 变成 (samples, 1)
+            yield (sr_out, wav_out)
 
 def build_interface():
     supported_models = []

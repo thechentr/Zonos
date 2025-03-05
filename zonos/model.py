@@ -226,7 +226,7 @@ class Zonos(nn.Module):
         sampling_params: dict = dict(min_p=0.1),
         progress_bar: bool = True,
         disable_torch_compile: bool = False,
-        # callback: Callable[[torch.Tensor, int, int], bool] | None = None,
+        callback: Callable[[torch.Tensor, int, int], bool] | None = None,
     ):
         assert cfg_scale != 1, "TODO: add support for cfg_scale=1"
         prefix_audio_len = 0 if audio_prefix_codes is None else audio_prefix_codes.shape[2]
@@ -303,8 +303,8 @@ class Zonos(nn.Module):
             progress.update()
             step += 1
 
-            # if callback is not None and not callback(frame, step, max_steps):
-            #     break
+            if callback is not None and not callback(frame, step, max_steps):
+                break
 
         out_codes = revert_delay_pattern(delayed_codes)
         out_codes.masked_fill_(out_codes >= 1024, 0)

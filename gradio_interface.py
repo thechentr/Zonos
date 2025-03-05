@@ -111,7 +111,7 @@ def generate_audio(
     confidence,
     quadratic,
     unconditional_keys,
-    # progress=gr.Progress(),
+    progress=gr.Progress(),
 ):
     """
     Generates audio based on the provided UI parameters.
@@ -170,7 +170,7 @@ def generate_audio(
 
     for chunk in text_chunks:
 
-        print(text_chunks)
+        print(chunk)
 
         with Timer('cond_dict'):
             cond_dict = make_cond_dict(
@@ -196,9 +196,9 @@ def generate_audio(
         estimated_generation_duration = 30 * len(chunk) / 400
         estimated_total_steps = int(estimated_generation_duration * 86)
 
-        # def update_progress(_frame: torch.Tensor, step: int, _total_steps: int) -> bool:
-        #     progress((step, estimated_total_steps))
-        #     return True
+        def update_progress(_frame: torch.Tensor, step: int, _total_steps: int) -> bool:
+            progress((step, estimated_total_steps))
+            return True
 
         with Timer('generate'):
             codes = selected_model.generate(
@@ -208,7 +208,7 @@ def generate_audio(
                 cfg_scale=cfg_scale,
                 batch_size=1,
                 sampling_params=dict(top_p=top_p, top_k=top_k, min_p=min_p, linear=linear, conf=confidence, quad=quadratic),
-                # callback=update_progress,
+                callback=update_progress,
             )
 
         with Timer('decode'):
@@ -216,6 +216,7 @@ def generate_audio(
             sr_out = selected_model.autoencoder.sampling_rate
             if wav_out.dim() == 2 and wav_out.size(0) > 1:
                 wav_out = wav_out[0:1, :]
+
         yield (sr_out, wav_out.squeeze().numpy())
 
 

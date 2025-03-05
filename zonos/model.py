@@ -303,8 +303,8 @@ class Zonos(nn.Module):
             progress.update()
             step += 1
 
-            if callback is not None and not callback(frame, step, max_steps):
-                break
+            # if callback is not None and not callback(frame, step, max_steps):
+            #     break
 
         out_codes = revert_delay_pattern(delayed_codes)
         out_codes.masked_fill_(out_codes >= 1024, 0)

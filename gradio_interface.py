@@ -217,31 +217,24 @@ def generate_audio(
             sr_out = selected_model.autoencoder.sampling_rate
             if wav_out.dim() == 2 and wav_out.size(0) > 1:
                 wav_out = wav_out[0:1, :]
-            wav_out = np.expand_dims(wav_out.squeeze().numpy(), axis=-1)  # 变成 (samples, 1)
-            yield (sr_out, wav_out)
+            torch.tensor().numpy().astype(np.float32)
+            wav_out = wav_out.squeeze().numpy()
+            yield (sr_out, wav_out) 
 
 def build_interface():
-    supported_models = []
-    if "transformer" in ZonosBackbone.supported_architectures:
-        supported_models.append("Zyphra/Zonos-v0.1-transformer")
+    # if "hybrid" in ZonosBackbone.supported_architectures:
+    #     supported_models.append("Zyphra/Zonos-v0.1-hybrid")
+    # else:
+    #     print(
+    #         "| The current ZonosBackbone does not support the hybrid architecture, meaning only the transformer model will be available in the model selector.\n"
+    #         "| This probably means the mamba-ssm library has not been installed."
+    #     )
 
-    if "hybrid" in ZonosBackbone.supported_architectures:
-        supported_models.append("Zyphra/Zonos-v0.1-hybrid")
-    else:
-        print(
-            "| The current ZonosBackbone does not support the hybrid architecture, meaning only the transformer model will be available in the model selector.\n"
-            "| This probably means the mamba-ssm library has not been installed."
-        )
+    model_choice = "Zyphra/Zonos-v0.1-transformer"
 
     with gr.Blocks() as demo:
         with gr.Row():
             with gr.Column():
-                model_choice = gr.Dropdown(
-                    choices=supported_models,
-                    value=supported_models[0],
-                    label="Zonos Model Type",
-                    info="Select the model variant to use.",
-                )
                 text = gr.Textbox(
                     label="Text to Synthesize",
                     value="Zonos uses eSpeak for text to phoneme conversion!",
@@ -335,31 +328,6 @@ def build_interface():
             generate_button = gr.Button("Generate Audio")
             output_audio = gr.Audio(label="Generated Audio", type="numpy", autoplay=True, streaming=True)
 
-        model_choice.change(
-            fn=update_ui,
-            inputs=[model_choice],
-            outputs=[
-                text,
-                language,
-                speaker_audio,
-                prefix_audio,
-                emotion1,
-                emotion2,
-                emotion3,
-                emotion4,
-                emotion5,
-                emotion6,
-                emotion7,
-                emotion8,
-                vq_single_slider,
-                fmax_slider,
-                pitch_std_slider,
-                speaking_rate_slider,
-                dnsmos_slider,
-                speaker_noised_checkbox,
-                unconditional_keys,
-            ],
-        )
 
         # On page load, trigger the same UI refresh
         demo.load(
@@ -429,4 +397,4 @@ def build_interface():
 if __name__ == "__main__":
     demo = build_interface()
     share = getenv("GRADIO_SHARE", "False").lower() in ("true", "1", "t")
-    demo.launch(server_name="0.0.0.0", server_port=8001, share=share)
+    demo.launch(server_name="0.0.0.0", server_port=8002, share=share)

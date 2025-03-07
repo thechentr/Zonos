@@ -46,24 +46,22 @@ def update_ui():
     text_update = gr.update(visible=("espeak" in cond_names))
     language_update = gr.update(visible=("espeak" in cond_names))
     speaker_audio_update = gr.update(visible=("speaker" in cond_names))
-    prefix_audio_update = gr.update(visible=True)
-    emotion1_update = gr.update(visible=("emotion" in cond_names))
-    emotion2_update = gr.update(visible=("emotion" in cond_names))
-    emotion3_update = gr.update(visible=("emotion" in cond_names))
-    emotion4_update = gr.update(visible=("emotion" in cond_names))
-    emotion5_update = gr.update(visible=("emotion" in cond_names))
-    emotion6_update = gr.update(visible=("emotion" in cond_names))
-    emotion7_update = gr.update(visible=("emotion" in cond_names))
-    emotion8_update = gr.update(visible=("emotion" in cond_names))
-    vq_single_slider_update = gr.update(visible=("vqscore_8" in cond_names))
-    fmax_slider_update = gr.update(visible=("fmax" in cond_names))
-    pitch_std_slider_update = gr.update(visible=("pitch_std" in cond_names))
-    speaking_rate_slider_update = gr.update(visible=("speaking_rate" in cond_names))
-    dnsmos_slider_update = gr.update(visible=("dnsmos_ovrl" in cond_names))
-    speaker_noised_checkbox_update = gr.update(visible=("speaker_noised" in cond_names))
-    unconditional_keys_update = gr.update(
-        choices=[name for name in cond_names if name not in ("espeak", "language_id")]
-    )
+    prefix_audio_update = gr.update(visible=False)
+    emotion1_update = gr.update(visible=False)
+    emotion2_update = gr.update(visible=False)
+    emotion3_update = gr.update(visible=False)
+    emotion4_update = gr.update(visible=False)
+    emotion5_update = gr.update(visible=False)
+    emotion6_update = gr.update(visible=False)
+    emotion7_update = gr.update(visible=False)
+    emotion8_update = gr.update(visible=False)
+    vq_single_slider_update = gr.update(visible=False)
+    fmax_slider_update = gr.update(visible=False)
+    pitch_std_slider_update = gr.update(visible=False)
+    speaking_rate_slider_update = gr.update(visible=False)
+    dnsmos_slider_update =gr.update(visible=False)
+    speaker_noised_checkbox_update = gr.update(visible=False)
+    unconditional_keys_update = gr.update(visible=False)
 
     return (
         text_update,
@@ -93,28 +91,21 @@ def generate_audio(
     language,
     speaker_audio,
     prefix_audio,
-    e1,
-    e2,
-    e3,
-    e4,
-    e5,
-    e6,
-    e7,
-    e8,
-    vq_single,
-    fmax,
-    pitch_std,
-    speaking_rate,
-    dnsmos_ovrl,
-    speaker_noised,
-    cfg_scale,
-    top_p,
-    top_k,
-    min_p,
-    linear,
-    confidence,
-    quadratic,
-    unconditional_keys,
+    emotions=[1.0000, 0.0500, 0.0500, 0.0500, 0.0500, 0.0500, 0.1000, 0.2000],
+    vq_single=0.78,
+    fmax=24000,
+    pitch_std=45,
+    speaking_rate=15,
+    dnsmos_ovrl=4,
+    speaker_noised=False,
+    cfg_scale=2,
+    top_p=0,
+    top_k=0,
+    min_p=0,
+    linear=0.5,
+    confidence=0.4,
+    quadratic=0,
+    unconditional_keys=[],
     chunk_size = 100
 ):
     """
@@ -160,28 +151,28 @@ def generate_audio(
             wav_prefix = wav_prefix.to(device, dtype=torch.float32)
             audio_prefix_codes = selected_model.autoencoder.encode(wav_prefix.unsqueeze(0))
 
-    emotion_tensor = torch.tensor(list(map(float, [e1, e2, e3, e4, e5, e6, e7, e8])), device=device)
+    emotion_tensor = torch.tensor(list(map(float, emotions)), device=device)
 
     vq_val = float(vq_single)
     vq_tensor = torch.tensor([vq_val] * 8, device=device).unsqueeze(0)
 
 
     print(f"text: {text}")
-    print(f"language: {language}")
-    if SPEAKER_EMBEDDING is not None:
-        print(f"speaker: {SPEAKER_EMBEDDING.shape}")
-    if emotion_tensor is not None:
-        print(f"emotion: {emotion_tensor}")
-    if vq_tensor is not None:
-        print(f"vqscore_8: {vq_tensor}")
-    print(f"fmax: {fmax}")
-    print(f"pitch_std: {pitch_std}")
-    print(f"speaking_rate: {speaking_rate}")
-    print(f"dnsmos_ovrl: {dnsmos_ovrl}")
-    print(f"speaker_noised: {speaker_noised_bool}")
-    print(f"unconditional_keys: {unconditional_keys}")
-    print(f'cfg_scale: {cfg_scale}')
-    print(f'top_p, top_k, min_p, linear, confidence, quadratic: {top_p}, {top_k}, {min_p}, {linear}, {confidence}, {quadratic}')
+    # print(f"language: {language}")
+    # if SPEAKER_EMBEDDING is not None:
+    #     print(f"speaker: {SPEAKER_EMBEDDING.shape}")
+    # if emotion_tensor is not None:
+    #     print(f"emotion: {emotion_tensor}")
+    # if vq_tensor is not None:
+    #     print(f"vqscore_8: {vq_tensor}")
+    # print(f"fmax: {fmax}")
+    # print(f"pitch_std: {pitch_std}")
+    # print(f"speaking_rate: {speaking_rate}")
+    # print(f"dnsmos_ovrl: {dnsmos_ovrl}")
+    # print(f"speaker_noised: {speaker_noised_bool}")
+    # print(f"unconditional_keys: {unconditional_keys}")
+    # print(f'cfg_scale: {cfg_scale}')
+    # print(f'top_p, top_k, min_p, linear, confidence, quadratic: {top_p}, {top_k}, {min_p}, {linear}, {confidence}, {quadratic}')
 
     cond_dict = make_cond_dict(
         text=text,
@@ -265,7 +256,6 @@ def build_interface():
                     info="Select a language code.",
                 )
             prefix_audio = gr.Audio(
-                value="assets/silence_100ms.wav",
                 label="Optional Prefix Audio (continue from this audio)",
                 type="filepath",
             )

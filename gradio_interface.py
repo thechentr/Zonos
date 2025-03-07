@@ -233,6 +233,7 @@ def generate_audio(
 
         chunk_size = 10
         accumulated_tokens = []
+        sr_out = selected_model.autoencoder.sampling_rate
 
         for token in token_generator:
             accumulated_tokens.append(token)
@@ -248,7 +249,7 @@ def generate_audio(
                 wav_chunk = (wav_chunk.squeeze().numpy() * 32767).astype('int16')
                 print(f"wav_chunk: {wav_chunk.shape}")
                 # yield 当前 chunk 解码后的音频片段
-                yield wav_chunk
+                yield (sr_out, wav_chunk)
 
                 # 清空累积 token 列表，准备下一组
                 accumulated_tokens = []
@@ -260,7 +261,7 @@ def generate_audio(
             if wav_chunk.dim() == 2 and wav_chunk.size(0) > 1:
                 wav_chunk = wav_chunk[0:1, :]
             wav_chunk = (wav_chunk.squeeze().numpy() * 32767).astype('int16')
-            yield wav_chunk
+            yield (sr_out, wav_chunk)
 
 
 def build_interface():

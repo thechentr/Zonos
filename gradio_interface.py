@@ -160,8 +160,8 @@ def generate_audio(
     vq_tensor = torch.tensor([vq_val] * 8, device=device).unsqueeze(0)
 
     def split_text(text):
-        pattern = r'[^ \\p{P}]+(?:[\\p{P}]+)?'
-        return regex.findall(pattern, text)
+        pattern = r'[^ \p{P}]+(?:[\p{P}]+)?'
+        return [chunk.strip() for chunk in regex.findall(pattern, text) if chunk.strip()]
     
     text_chunks = split_text(text)
 
@@ -387,6 +387,7 @@ def build_interface():
 
 
 if __name__ == "__main__":
+    load_model_if_needed()
     demo = build_interface()
     share = getenv("GRADIO_SHARE", "False").lower() in ("true", "1", "t")
     demo.launch(server_name="0.0.0.0", server_port=8002, share=share)

@@ -166,8 +166,7 @@ def generate_audio(
         # 解释：
         # [^ \p{P}]+  匹配一段不包含空格和标点的文字
         # (?:[\p{P}]+)? 匹配紧跟其后的一个或多个标点（非必须）
-        pattern = r'[^ \p{P}]+(?:[\p{P}]+)?'
-
+        pattern = r'[^ \\p{P}]+(?:[\\p{P}]+)?'
         return regex.findall(pattern, text)
     
     text_chunks = split_text(text)

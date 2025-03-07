@@ -229,8 +229,6 @@ class Zonos(nn.Module):
         # callback: Callable[[torch.Tensor, int, int], bool] | None = None,
     ):
         assert cfg_scale != 1, "TODO: add support for cfg_scale=1"
-        if cfg_scale == 1:
-            print("Warning: cfg_scale=1 is not supported yet. Using cfg_scale=2 instead.")
         prefix_audio_len = 0 if audio_prefix_codes is None else audio_prefix_codes.shape[2]
         device = self.device
 
@@ -274,7 +272,7 @@ class Zonos(nn.Module):
         progress = tqdm(total=max_steps, desc="Generating", disable=not progress_bar)
         cfg_scale = torch.tensor(cfg_scale)
 
-        # step = 0
+        step = 0
         while torch.max(remaining_steps) > 0:
             offset += 1
             input_ids = delayed_codes[..., offset - 1 : offset]  # 只用前
@@ -303,7 +301,8 @@ class Zonos(nn.Module):
             remaining_steps -= 1
 
             # progress.update()
-            # step += 1
+            step += 1
+            print(step)
 
             # if callback is not None and not callback(frame, step, max_steps):
             #     break

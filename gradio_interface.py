@@ -212,6 +212,13 @@ def build_interface():
             generate_button = gr.Button("Generate Audio")
             output_audio = gr.Audio(label="Generated Audio", type="numpy", autoplay=True, streaming=True)
 
+        # warm up
+        for _ in range(3):
+            generate_audio(
+                text=text.value,
+                language=language.value,
+                speaker_audio=speaker_audio.value,
+            )
 
 
         # Generate audio on button click

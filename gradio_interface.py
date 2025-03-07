@@ -183,21 +183,21 @@ def generate_audio(
 
         with Timer('cond_dict'):
             print(f"text: {chunk}")
-            print(f"language: {language}")
-            if SPEAKER_EMBEDDING is not None:
-                print(f"speaker: {SPEAKER_EMBEDDING.shape}")
-            if emotion_tensor is not None:
-                print(f"emotion: {emotion_tensor.shape}")
-            if vq_tensor is not None:
-                print(f"vqscore_8: {vq_tensor.shape}")
-            print(f"fmax: {fmax}")
-            print(f"pitch_std: {pitch_std}")
-            print(f"speaking_rate: {speaking_rate}")
-            print(f"dnsmos_ovrl: {dnsmos_ovrl}")
-            print(f"speaker_noised: {speaker_noised_bool}")
-            print(f"unconditional_keys: {unconditional_keys}")
-            print(f'cfg_scale: {cfg_scale}')
-            print(f'top_p, top_k, min_p, linear, confidence, quadratic: {top_p}, {top_k}, {min_p}, {linear}, {confidence}, {quadratic}')
+            # print(f"language: {language}")
+            # if SPEAKER_EMBEDDING is not None:
+            #     print(f"speaker: {SPEAKER_EMBEDDING.shape}")
+            # if emotion_tensor is not None:
+            #     print(f"emotion: {emotion_tensor.shape}")
+            # if vq_tensor is not None:
+            #     print(f"vqscore_8: {vq_tensor.shape}")
+            # print(f"fmax: {fmax}")
+            # print(f"pitch_std: {pitch_std}")
+            # print(f"speaking_rate: {speaking_rate}")
+            # print(f"dnsmos_ovrl: {dnsmos_ovrl}")
+            # print(f"speaker_noised: {speaker_noised_bool}")
+            # print(f"unconditional_keys: {unconditional_keys}")
+            # print(f'cfg_scale: {cfg_scale}')
+            # print(f'top_p, top_k, min_p, linear, confidence, quadratic: {top_p}, {top_k}, {min_p}, {linear}, {confidence}, {quadratic}')
 
             cond_dict = make_cond_dict(
                 text=chunk,
@@ -246,20 +246,21 @@ def generate_audio(
                 if wav_chunk.dim() == 2 and wav_chunk.size(0) > 1:
                     wav_chunk = wav_chunk[0:1, :]
                 wav_chunk = (wav_chunk.squeeze().numpy() * 32767).astype('int16')
+                print(f"wav_chunk: {wav_chunk.shape}")
                 # yield 当前 chunk 解码后的音频片段
                 yield wav_chunk
 
                 # 清空累积 token 列表，准备下一组
                 accumulated_tokens = []
             
-            # 若循环结束后还有不足 chunk_size 的 token，仍然解码输出
-            if accumulated_tokens:
-                chunk_codes = torch.stack(accumulated_tokens, dim=-1)
-                wav_chunk = selected_model.autoencoder.decode(chunk_codes).cpu().detach()
-                if wav_chunk.dim() == 2 and wav_chunk.size(0) > 1:
-                    wav_chunk = wav_chunk[0:1, :]
-                wav_chunk = (wav_chunk.squeeze().numpy() * 32767).astype('int16')
-                yield wav_chunk
+        # 若循环结束后还有不足 chunk_size 的 token，仍然解码输出
+        if accumulated_tokens:
+            chunk_codes = torch.stack(accumulated_tokens, dim=-1)
+            wav_chunk = selected_model.autoencoder.decode(chunk_codes).cpu().detach()
+            if wav_chunk.dim() == 2 and wav_chunk.size(0) > 1:
+                wav_chunk = wav_chunk[0:1, :]
+            wav_chunk = (wav_chunk.squeeze().numpy() * 32767).astype('int16')
+            yield wav_chunk
 
 
 def build_interface():

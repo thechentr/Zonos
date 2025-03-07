@@ -166,8 +166,16 @@ def generate_audio(
     vq_tensor = torch.tensor([vq_val] * 8, device=device).unsqueeze(0)
 
     def split_text(text):
-        pattern = r'\p{P}+'  # split by punctuation
-        return [chunk.strip() for chunk in regex.split(pattern, text) if chunk.strip()]
+
+        pattern = r'(.+?[\p{P}]+)(?:\s+|$)'
+        sentences = regex.findall(pattern, text)
+        
+        # 如果文本最后没有标点符号，regex.findall 不会捕获最后一段，这里补充处理
+        remainder = regex.sub(pattern, '', text).strip()
+        if remainder:
+            sentences.append(remainder)
+        
+        return sentences
     
     text_chunks = split_text(text)
 
@@ -246,7 +254,7 @@ def build_interface():
             with gr.Column():
                 text = gr.Textbox(
                     label="Text to Synthesize",
-                    value="Zonos uses eSpeak for text to phoneme conversion!",
+                    value="Hi, I am Kai from FlashIntel. I am reaching out because we found that you have visited our website recently. Are you available for a quick chat?",
                     lines=4,
                     max_length=500,  # approximately
                 )

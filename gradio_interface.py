@@ -2,6 +2,7 @@ import torch
 import torchaudio
 import gradio as gr
 from os import getenv
+import os
 
 from zonos.model import Zonos, DEFAULT_BACKBONE_CLS as ZonosBackbone
 from zonos.conditioning import make_cond_dict, supported_language_codes
@@ -13,8 +14,9 @@ import regex
 CURRENT_MODEL_TYPE = "Zyphra/Zonos-v0.1-transformer"
 CURRENT_MODEL = None
 
-SPEAKER_EMBEDDING = None
-SPEAKER_AUDIO_PATH = None
+wav, sr = torchaudio.load(os.path.join("assets", "voice.wav"))
+SPEAKER_EMBEDDING = CURRENT_MODEL.make_speaker_embedding(wav, sr)
+SPEAKER_EMBEDDING = SPEAKER_EMBEDDING.to(device, dtype=torch.bfloat16)
 
 
 def load_model_if_needed():
@@ -137,13 +139,12 @@ def generate_audio(
     global SPEAKER_AUDIO_PATH, SPEAKER_EMBEDDING
 
     with Timer('speaker_audio'):
-        if speaker_audio is not None and "speaker" not in unconditional_keys:
-            if speaker_audio != SPEAKER_AUDIO_PATH:
-                print("Recomputed speaker embedding")
-                wav, sr = torchaudio.load(speaker_audio)
-                SPEAKER_EMBEDDING = selected_model.make_speaker_embedding(wav, sr)
-                SPEAKER_EMBEDDING = SPEAKER_EMBEDDING.to(device, dtype=torch.bfloat16)
-                SPEAKER_AUDIO_PATH = speaker_audio
+        if speaker_audio is not None and SPEAKER_AUDIO_PATH != speaker_audio:
+            print("Computed speaker embedding")
+            wav, sr = torchaudio.load(speaker_audio)
+            SPEAKER_EMBEDDING = selected_model.make_speaker_embedding(wav, sr)
+            SPEAKER_EMBEDDING = SPEAKER_EMBEDDING.to(device, dtype=torch.bfloat16)
+            SPEAKER_AUDIO_PATH = speaker_audio
 
     with Timer('prefix_audio'):
         audio_prefix_codes = None

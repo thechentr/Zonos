@@ -8,6 +8,7 @@ from zonos.conditioning import make_cond_dict, supported_language_codes
 from zonos.utils import DEFAULT_DEVICE as device
 from timer import Timer
 import numpy as np
+import regex
 
 CURRENT_MODEL_TYPE = "Zyphra/Zonos-v0.1-transformer"
 CURRENT_MODEL = None
@@ -107,7 +108,7 @@ def generate_audio(
     confidence,
     quadratic,
     unconditional_keys,
-    progress=gr.Progress(),
+    # progress=gr.Progress(),
 ):
     """
     Generates audio based on the provided UI parameters.
@@ -156,11 +157,18 @@ def generate_audio(
     vq_val = float(vq_single)
     vq_tensor = torch.tensor([vq_val] * 8, device=device).unsqueeze(0)
 
-    def split_text(text, chunk_size=20):
+    def split_text(text):
         """
-        将文本分割成小块，每个块最多 chunk_size 个字符。
+        按照各种语言的标点符号分割文本，保留标点。
+        该方法利用 Unicode 属性匹配标点（\p{P}），
+        能够适用于中英文以及其他语言的标点。
         """
-        return [text[i:i+chunk_size] for i in range(0, len(text), chunk_size)]
+        # 解释：
+        # [^ \p{P}]+  匹配一段不包含空格和标点的文字
+        # (?:[\p{P}]+)? 匹配紧跟其后的一个或多个标点（非必须）
+        pattern = r'[^ \p{P}]+(?:[\p{P}]+)?'
+
+        return regex.findall(pattern, text)
     
     text_chunks = split_text(text)
 
@@ -189,12 +197,12 @@ def generate_audio(
         if isinstance(conditioning, torch.Tensor):
             print(conditioning.shape)
 
-        estimated_generation_duration = 30 * len(chunk) / 400
-        estimated_total_steps = int(estimated_generation_duration * 86)
+        # estimated_generation_duration = 30 * len(chunk) / 400
+        # estimated_total_steps = int(estimated_generation_duration * 86)
 
-        def update_progress(_frame: torch.Tensor, step: int, _total_steps: int) -> bool:
+        # def update_progress(_frame: torch.Tensor, step: int, _total_steps: int) -> bool:
             # progress((step, estimated_total_steps))
-            return True
+            # return True
 
         with Timer('generate'):
             codes = selected_model.generate(
@@ -204,7 +212,7 @@ def generate_audio(
                 cfg_scale=cfg_scale,
                 batch_size=1,
                 sampling_params=dict(top_p=top_p, top_k=top_k, min_p=min_p, linear=linear, conf=confidence, quad=quadratic),
-                callback=update_progress,
+                # callback=update_progress,
             )
 
         with Timer('decode'):

@@ -212,7 +212,6 @@ def generate_audio(
             sr_out = selected_model.autoencoder.sampling_rate
             if wav_out.dim() == 2 and wav_out.size(0) > 1:
                 wav_out = wav_out[0:1, :]
-            torch.tensor().numpy().astype(np.float32)
             wav_out = wav_out.squeeze().numpy()
             yield (sr_out, wav_out) 
 

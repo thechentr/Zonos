@@ -117,6 +117,8 @@ def generate_audio(
     with Timer('load model'):
         selected_model = load_model_if_needed()
 
+    torch.manual_seed(123)
+
     speaker_noised_bool = bool(speaker_noised)
     fmax = float(fmax)
     pitch_std = float(pitch_std)

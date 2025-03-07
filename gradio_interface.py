@@ -158,8 +158,6 @@ def generate_audio(
     vq_tensor = torch.tensor([vq_val] * 8, device=device).unsqueeze(0)
 
     def split_text(text):
-        # [^ \p{P}]+  匹配一段不包含空格和标点的文字
-        # (?:[\p{P}]+)? 匹配紧跟其后的一个或多个标点（非必须）
         pattern = r'[^ \\p{P}]+(?:[\\p{P}]+)?'
         return regex.findall(pattern, text)
     

@@ -59,8 +59,7 @@ def generate_audio(
     Generates audio based on the provided UI parameters.
     We do NOT use language_id or ctc_loss even if the model has them.
     """
-    with Timer('load model'):
-        selected_model = load_model_if_needed()
+    selected_model = load_model_if_needed()
 
     torch.manual_seed(123)
 
@@ -81,22 +80,20 @@ def generate_audio(
     # This is a bit ew, but works for now.
     global SPEAKER_AUDIO_PATH, SPEAKER_EMBEDDING
 
-    with Timer('speaker_audio'):
-        if speaker_audio is not None and SPEAKER_AUDIO_PATH != speaker_audio:
-            print("Computed speaker embedding")
-            wav, sr = torchaudio.load(speaker_audio)
-            SPEAKER_EMBEDDING = selected_model.make_speaker_embedding(wav, sr)
-            SPEAKER_EMBEDDING = SPEAKER_EMBEDDING.to(device, dtype=torch.bfloat16)
-            SPEAKER_AUDIO_PATH = speaker_audio
+    if speaker_audio is not None and SPEAKER_AUDIO_PATH != speaker_audio:
+        print("Computed speaker embedding")
+        wav, sr = torchaudio.load(speaker_audio)
+        SPEAKER_EMBEDDING = selected_model.make_speaker_embedding(wav, sr)
+        SPEAKER_EMBEDDING = SPEAKER_EMBEDDING.to(device, dtype=torch.bfloat16)
+        SPEAKER_AUDIO_PATH = speaker_audio
 
-    with Timer('prefix_audio'):
-        audio_prefix_codes = None
-        if prefix_audio is not None:
-            wav_prefix, sr_prefix = torchaudio.load(prefix_audio)
-            wav_prefix = wav_prefix.mean(0, keepdim=True)
-            wav_prefix = selected_model.autoencoder.preprocess(wav_prefix, sr_prefix)
-            wav_prefix = wav_prefix.to(device, dtype=torch.float32)
-            audio_prefix_codes = selected_model.autoencoder.encode(wav_prefix.unsqueeze(0))
+    audio_prefix_codes = None
+    if prefix_audio is not None:
+        wav_prefix, sr_prefix = torchaudio.load(prefix_audio)
+        wav_prefix = wav_prefix.mean(0, keepdim=True)
+        wav_prefix = selected_model.autoencoder.preprocess(wav_prefix, sr_prefix)
+        wav_prefix = wav_prefix.to(device, dtype=torch.float32)
+        audio_prefix_codes = selected_model.autoencoder.encode(wav_prefix.unsqueeze(0))
 
     emotion_tensor = torch.tensor(list(map(float, emotions)), device=device)
 
@@ -104,7 +101,7 @@ def generate_audio(
     vq_tensor = torch.tensor([vq_val] * 8, device=device).unsqueeze(0)
 
 
-    print(f"text: {text}")
+    # print(f"text: {text}")
     # print(f"language: {language}")
     # if SPEAKER_EMBEDDING is not None:
     #     print(f"speaker: {SPEAKER_EMBEDDING.shape}")

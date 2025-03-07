@@ -171,9 +171,9 @@ def generate_audio(
     if SPEAKER_EMBEDDING is not None:
         print(f"speaker: {SPEAKER_EMBEDDING.shape}")
     if emotion_tensor is not None:
-        print(f"emotion: {emotion_tensor.shape}")
+        print(f"emotion: {emotion_tensor}")
     if vq_tensor is not None:
-        print(f"vqscore_8: {vq_tensor.shape}")
+        print(f"vqscore_8: {vq_tensor}")
     print(f"fmax: {fmax}")
     print(f"pitch_std: {pitch_std}")
     print(f"speaking_rate: {speaking_rate}")

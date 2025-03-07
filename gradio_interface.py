@@ -234,13 +234,23 @@ def generate_audio(
             )
         print(codes.shape)
         with Timer('decode'):
-            for code in codes:
-                wav_out = selected_model.autoencoder.decode(code.unsqueeze(0)).cpu().detach()
+            num_tokens = codes.size(-1)
+            for i in range(num_tokens):
+                # 取出当前部分的 codes（逐步增加）
+                partial_codes = codes[..., : i + 1]
+                # 调用 autoencoder 解码当前部分
+                wav_out = selected_model.autoencoder.decode(partial_codes).cpu().detach()
                 sr_out = selected_model.autoencoder.sampling_rate
+
+                # 如果解码结果的形状为 [多帧, ...]，则只取第一帧（如果需要）
                 if wav_out.dim() == 2 and wav_out.size(0) > 1:
                     wav_out = wav_out[0:1, :]
+                # squeeze 去掉 batch 或多余维度
                 wav_out = wav_out.squeeze().numpy()
+                # 将浮点型的音频（假定范围为[-1, 1]）转换为 int16 格式
                 wav_out = (wav_out * 32767).astype('int16')
+                
+                # 每次 yield 当前生成的部分结果
                 yield (sr_out, wav_out)
 
 def build_interface():

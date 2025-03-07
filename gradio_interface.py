@@ -177,7 +177,8 @@ def generate_audio(
         
         return sentences
     
-    text_chunks = split_text(text)
+    # text_chunks = split_text(text)
+    text_chunks = [text]
 
     for chunk in text_chunks:
 
@@ -231,7 +232,7 @@ def generate_audio(
             sampling_params=dict(top_p=top_p, top_k=top_k, min_p=min_p, linear=linear, conf=confidence, quad=quadratic),
         )
 
-        chunk_size = 10
+        chunk_size = 100
         accumulated_tokens = []
         sr_out = selected_model.autoencoder.sampling_rate
 

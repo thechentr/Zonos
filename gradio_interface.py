@@ -15,8 +15,9 @@ CURRENT_MODEL_TYPE = "Zyphra/Zonos-v0.1-transformer"
 CURRENT_MODEL = None
 
 wav, sr = torchaudio.load(os.path.join("assets", "voice.wav"))
-SPEAKER_EMBEDDING = CURRENT_MODEL.make_speaker_embedding(wav, sr)
-SPEAKER_EMBEDDING = SPEAKER_EMBEDDING.to(device, dtype=torch.bfloat16)
+
+SPEAKER_AUDIO_PATH = os.path.join("assets", "voice.wav")
+SPEAKER_EMBEDDING = None
 
 
 def load_model_if_needed():
@@ -26,6 +27,10 @@ def load_model_if_needed():
         CURRENT_MODEL = Zonos.from_pretrained(CURRENT_MODEL_TYPE, device=device)
         CURRENT_MODEL.requires_grad_(False).eval()
         print(f"{CURRENT_MODEL_TYPE} model loaded successfully!")
+
+    wav, sr = torchaudio.load(SPEAKER_AUDIO_PATH)
+    SPEAKER_EMBEDDING = CURRENT_MODEL.make_speaker_embedding(wav, sr)
+    SPEAKER_EMBEDDING = SPEAKER_EMBEDDING.to(device, dtype=torch.bfloat16)
     return CURRENT_MODEL
 
 

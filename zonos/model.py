@@ -304,7 +304,7 @@ class Zonos(nn.Module):
             step += 1
             print(step)
 
-            if offset > self.num_codebooks:
+            if offset > 9: # num_codebooks is 9
                 # 截取当前已生成的部分，形状为 [batch, num_codebooks, offset]
                 partial_codes = delayed_codes[..., :offset]
                 # 对齐：得到形状 [batch, num_codebooks, offset - num_codebooks]

@@ -166,14 +166,14 @@ def generate_audio(
     vq_tensor = torch.tensor([vq_val] * 8, device=device).unsqueeze(0)
 
     def split_text(text):
-        pattern = r'[^ \p{P}]+(?:[\p{P}]+)?'
-        return [chunk.strip() for chunk in regex.findall(pattern, text) if chunk.strip()]
+        pattern = r'\\p{P}+'  # split by punctuation
+        return [chunk.strip() for chunk in regex.split(pattern, text) if chunk.strip()]
     
     text_chunks = split_text(text)
 
     for chunk in text_chunks:
 
-        print(chunk)
+        print(chunk, SPEAKER_EMBEDDING.shape, emotion_tensor.shape, vq_tensor.shape)
 
         with Timer('cond_dict'):
             cond_dict = make_cond_dict(

@@ -33,64 +33,11 @@ def load_model_if_needed():
     SPEAKER_EMBEDDING = SPEAKER_EMBEDDING.to(device, dtype=torch.bfloat16)
     return CURRENT_MODEL
 
-
-def update_ui():
-    """
-    Dynamically show/hide UI elements based on the model's conditioners.
-    We do NOT display 'language_id' or 'ctc_loss' even if they exist in the model.
-    """
-    model = load_model_if_needed()
-    cond_names = [c.name for c in model.prefix_conditioner.conditioners]
-    print("Conditioners in this model:", cond_names)
-
-    text_update = gr.update(visible=("espeak" in cond_names))
-    language_update = gr.update(visible=("espeak" in cond_names))
-    speaker_audio_update = gr.update(visible=("speaker" in cond_names))
-    prefix_audio_update = gr.update(visible=False)
-    emotion1_update = gr.update(visible=False)
-    emotion2_update = gr.update(visible=False)
-    emotion3_update = gr.update(visible=False)
-    emotion4_update = gr.update(visible=False)
-    emotion5_update = gr.update(visible=False)
-    emotion6_update = gr.update(visible=False)
-    emotion7_update = gr.update(visible=False)
-    emotion8_update = gr.update(visible=False)
-    vq_single_slider_update = gr.update(visible=False)
-    fmax_slider_update = gr.update(visible=False)
-    pitch_std_slider_update = gr.update(visible=False)
-    speaking_rate_slider_update = gr.update(visible=False)
-    dnsmos_slider_update =gr.update(visible=False)
-    speaker_noised_checkbox_update = gr.update(visible=False)
-    unconditional_keys_update = gr.update(visible=False)
-
-    return (
-        text_update,
-        language_update,
-        speaker_audio_update,
-        prefix_audio_update,
-        emotion1_update,
-        emotion2_update,
-        emotion3_update,
-        emotion4_update,
-        emotion5_update,
-        emotion6_update,
-        emotion7_update,
-        emotion8_update,
-        vq_single_slider_update,
-        fmax_slider_update,
-        pitch_std_slider_update,
-        speaking_rate_slider_update,
-        dnsmos_slider_update,
-        speaker_noised_checkbox_update,
-        unconditional_keys_update,
-    )
-
-
 def generate_audio(
     text,
     language,
     speaker_audio,
-    prefix_audio,
+    prefix_audio=None,
     emotions=[1.0000, 0.0500, 0.0500, 0.0500, 0.0500, 0.0500, 0.1000, 0.2000],
     vq_single=0.78,
     fmax=24000,
@@ -190,7 +137,7 @@ def generate_audio(
     )
     conditioning = selected_model.prepare_conditioning(cond_dict)
 
-    # 用于存储累计的 token 列表，每个 token 的形状假设为 [batch, num_codebooks]
+    # 用于存储累计的 token 列表，每个 token 的形状为 [batch, num_codebooks]
     token_generator = selected_model.generate(
         prefix_conditioning=conditioning,
         audio_prefix_codes=audio_prefix_codes,
@@ -255,113 +202,17 @@ def build_interface():
                     label="Language Code",
                     info="Select a language code.",
                 )
-            prefix_audio = gr.Audio(
-                label="Optional Prefix Audio (continue from this audio)",
-                type="filepath",
-            )
             with gr.Column():
                 speaker_audio = gr.Audio(
                     label="Optional Speaker Audio (for cloning)",
                     type="filepath",
                 )
-                speaker_noised_checkbox = gr.Checkbox(label="Denoise Speaker?", value=False)
-
-        with gr.Row():
-            with gr.Column():
-                gr.Markdown("## Conditioning Parameters")
-                dnsmos_slider = gr.Slider(1.0, 5.0, value=4.0, step=0.1, label="DNSMOS Overall")
-                fmax_slider = gr.Slider(0, 24000, value=24000, step=1, label="Fmax (Hz)")
-                vq_single_slider = gr.Slider(0.5, 0.8, 0.78, 0.01, label="VQ Score")
-                pitch_std_slider = gr.Slider(0.0, 300.0, value=45.0, step=1, label="Pitch Std")
-                speaking_rate_slider = gr.Slider(5.0, 30.0, value=15.0, step=0.5, label="Speaking Rate")
-
-            with gr.Column():
-                gr.Markdown("## Generation Parameters")
-                cfg_scale_slider = gr.Slider(1.0, 5.0, 2.0, 0.1, label="CFG Scale")
-
-        with gr.Accordion("Sampling", open=False):
-            with gr.Row():
-                with gr.Column():
-                    gr.Markdown("### NovelAi's unified sampler")
-                    linear_slider = gr.Slider(-2.0, 2.0, 0.5, 0.01, label="Linear (set to 0 to disable unified sampling)", info="High values make the output less random.")
-                    #Conf's theoretical range is between -2 * Quad and 0.
-                    confidence_slider = gr.Slider(-2.0, 2.0, 0.40, 0.01, label="Confidence", info="Low values make random outputs more random.")
-                    quadratic_slider = gr.Slider(-2.0, 2.0, 0.00, 0.01, label="Quadratic", info="High values make low probablities much lower.")
-                with gr.Column():
-                    gr.Markdown("### Legacy sampling")
-                    top_p_slider = gr.Slider(0.0, 1.0, 0, 0.01, label="Top P")
-                    min_k_slider = gr.Slider(0.0, 1024, 0, 1, label="Min K")
-                    min_p_slider = gr.Slider(0.0, 1.0, 0, 0.01, label="Min P")
-
-        with gr.Accordion("Advanced Parameters", open=False):
-            gr.Markdown(
-                "### Unconditional Toggles\n"
-                "Checking a box will make the model ignore the corresponding conditioning value and make it unconditional.\n"
-                'Practically this means the given conditioning feature will be unconstrained and "filled in automatically".'
-            )
-            with gr.Row():
-                unconditional_keys = gr.CheckboxGroup(
-                    [
-                        "speaker",
-                        "emotion",
-                        "vqscore_8",
-                        "fmax",
-                        "pitch_std",
-                        "speaking_rate",
-                        "dnsmos_ovrl",
-                        "speaker_noised",
-                    ],
-                    value=[],
-                    label="Unconditional Keys",
-                )
-
-            gr.Markdown(
-                "### Emotion Sliders\n"
-                "Warning: The way these sliders work is not intuitive and may require some trial and error to get the desired effect.\n"
-                "Certain configurations can cause the model to become unstable. Setting emotion to unconditional may help."
-            )
-            with gr.Row():
-                emotion1 = gr.Slider(0.0, 1.0, 1.0, 0.05, label="Happiness")
-                emotion2 = gr.Slider(0.0, 1.0, 0.05, 0.05, label="Sadness")
-                emotion3 = gr.Slider(0.0, 1.0, 0.05, 0.05, label="Disgust")
-                emotion4 = gr.Slider(0.0, 1.0, 0.05, 0.05, label="Fear")
-            with gr.Row():
-                emotion5 = gr.Slider(0.0, 1.0, 0.05, 0.05, label="Surprise")
-                emotion6 = gr.Slider(0.0, 1.0, 0.05, 0.05, label="Anger")
-                emotion7 = gr.Slider(0.0, 1.0, 0.1, 0.05, label="Other")
-                emotion8 = gr.Slider(0.0, 1.0, 0.2, 0.05, label="Neutral")
 
         with gr.Column():
             generate_button = gr.Button("Generate Audio")
             output_audio = gr.Audio(label="Generated Audio", type="numpy", autoplay=True, streaming=True)
 
 
-        # On page load, trigger the same UI refresh
-        demo.load(
-            fn=update_ui,
-            inputs=[],
-            outputs=[
-                text,
-                language,
-                speaker_audio,
-                prefix_audio,
-                emotion1,
-                emotion2,
-                emotion3,
-                emotion4,
-                emotion5,
-                emotion6,
-                emotion7,
-                emotion8,
-                vq_single_slider,
-                fmax_slider,
-                pitch_std_slider,
-                speaking_rate_slider,
-                dnsmos_slider,
-                speaker_noised_checkbox,
-                unconditional_keys,
-            ],
-        )
 
         # Generate audio on button click
         generate_button.click(
@@ -370,29 +221,6 @@ def build_interface():
                 text,
                 language,
                 speaker_audio,
-                prefix_audio,
-                emotion1,
-                emotion2,
-                emotion3,
-                emotion4,
-                emotion5,
-                emotion6,
-                emotion7,
-                emotion8,
-                vq_single_slider,
-                fmax_slider,
-                pitch_std_slider,
-                speaking_rate_slider,
-                dnsmos_slider,
-                speaker_noised_checkbox,
-                cfg_scale_slider,
-                top_p_slider,
-                min_k_slider,
-                min_p_slider,
-                linear_slider,
-                confidence_slider,
-                quadratic_slider,
-                unconditional_keys,
             ],
             outputs=[output_audio],
         )

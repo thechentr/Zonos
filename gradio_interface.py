@@ -238,12 +238,14 @@ def generate_audio(
             sr_out = selected_model.autoencoder.sampling_rate  # 获取采样率
             wav_segments = []  # 用于存储每个 token 解码得到的音频片段
 
-            # 对每个 token 单独解码
-            for i in range(num_tokens):
-                # 提取当前 token，shape 为 [1, 9, 1]
-                token_code = codes[..., i:i+1]
-                # 解码：返回的结果 shape 可能为 [batch, 1, samples]
-                wav_out = selected_model.autoencoder.decode(token_code).cpu().detach()
+            chunk_size = 100  # 每次解码 100 个 token
+
+            # 按照 chunk_size 分组解码
+            for i in range(0, num_tokens, chunk_size):
+                # 提取当前 chunk，形状为 [1, 9, chunk_size] (最后一组可能不足 chunk_size)
+                token_chunk = codes[..., i:i+chunk_size]
+                # 解码，返回结果可能为 [batch, 1, samples]
+                wav_out = selected_model.autoencoder.decode(token_chunk).cpu().detach()
                 
                 # 如果输出是二维且 batch 大于 1，则只取第一条记录（通常 batch 为 1）
                 if wav_out.dim() == 2 and wav_out.size(0) > 1:

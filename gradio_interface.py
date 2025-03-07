@@ -158,12 +158,6 @@ def generate_audio(
     vq_tensor = torch.tensor([vq_val] * 8, device=device).unsqueeze(0)
 
     def split_text(text):
-        """
-        按照各种语言的标点符号分割文本，保留标点。
-        该方法利用 Unicode 属性匹配标点（\p{P}），
-        能够适用于中英文以及其他语言的标点。
-        """
-        # 解释：
         # [^ \p{P}]+  匹配一段不包含空格和标点的文字
         # (?:[\p{P}]+)? 匹配紧跟其后的一个或多个标点（非必须）
         pattern = r'[^ \\p{P}]+(?:[\\p{P}]+)?'

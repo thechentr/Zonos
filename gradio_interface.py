@@ -235,23 +235,30 @@ def generate_audio(
         print(codes.shape)
         with Timer('decode'):
             num_tokens = codes.size(-1)
-            for i in range(num_tokens):
-                # 取出当前部分的 codes（逐步增加）
-                partial_codes = codes[..., : i + 1]
-                # 调用 autoencoder 解码当前部分
-                wav_out = selected_model.autoencoder.decode(partial_codes).cpu().detach()
-                sr_out = selected_model.autoencoder.sampling_rate
+            sr_out = selected_model.autoencoder.sampling_rate  # 获取采样率
+            wav_segments = []  # 用于存储每个 token 解码得到的音频片段
 
-                # 如果解码结果的形状为 [多帧, ...]，则只取第一帧（如果需要）
+            # 对每个 token 单独解码
+            for i in range(num_tokens):
+                # 提取当前 token，shape 为 [1, 9, 1]
+                token_code = codes[..., i:i+1]
+                # 解码：返回的结果 shape 可能为 [batch, 1, samples]
+                wav_out = selected_model.autoencoder.decode(token_code).cpu().detach()
+                
+                # 如果输出是二维且 batch 大于 1，则只取第一条记录（通常 batch 为 1）
                 if wav_out.dim() == 2 and wav_out.size(0) > 1:
                     wav_out = wav_out[0:1, :]
-                # squeeze 去掉 batch 或多余维度
-                wav_out = wav_out.squeeze().numpy()
-                # 将浮点型的音频（假定范围为[-1, 1]）转换为 int16 格式
-                wav_out = (wav_out * 32767).astype('int16')
                 
-                # 每次 yield 当前生成的部分结果
-                yield (sr_out, wav_out)
+                # squeeze 去掉 batch 和 channel 维度，使其变为 [samples]
+                wav_out = wav_out.squeeze()
+                wav_segments.append(wav_out)
+
+            # 拼接所有音频片段，假设它们在时间上连续
+            final_wav = torch.cat(wav_segments, dim=-1)
+            final_wav = final_wav.numpy()
+            # 将浮点型音频（假定范围为 [-1, 1]）映射到 int16
+            final_wav = (final_wav * 32767).astype('int16')
+            yield (sr_out, final_wav)
 
 def build_interface():
     # if "hybrid" in ZonosBackbone.supported_architectures:

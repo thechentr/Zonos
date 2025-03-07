@@ -21,7 +21,7 @@ SPEAKER_EMBEDDING = None
 
 
 def load_model_if_needed():
-    global CURRENT_MODEL
+    global CURRENT_MODEL, SPEAKER_EMBEDDING
     if CURRENT_MODEL is None:
         print(f"Loading {CURRENT_MODEL_TYPE} model...")
         CURRENT_MODEL = Zonos.from_pretrained(CURRENT_MODEL_TYPE, device=device)

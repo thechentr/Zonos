@@ -166,7 +166,7 @@ def generate_audio(
     vq_tensor = torch.tensor([vq_val] * 8, device=device).unsqueeze(0)
 
     def split_text(text):
-        pattern = r'\\p{P}+'  # split by punctuation
+        pattern = r'\p{P}+'  # split by punctuation
         return [chunk.strip() for chunk in regex.split(pattern, text) if chunk.strip()]
     
     text_chunks = split_text(text)
@@ -313,7 +313,7 @@ def build_interface():
                         "dnsmos_ovrl",
                         "speaker_noised",
                     ],
-                    value=["emotion"],
+                    value=[],
                     label="Unconditional Keys",
                 )
 

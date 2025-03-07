@@ -196,6 +196,8 @@ def generate_audio(
             print(f"dnsmos_ovrl: {dnsmos_ovrl}")
             print(f"speaker_noised: {speaker_noised_bool}")
             print(f"unconditional_keys: {unconditional_keys}")
+            print(f'cfg_scale: {cfg_scale}')
+            print(f'top_p, top_k, min_p, linear, confidence, quadratic: {top_p}, {top_k}, {min_p}, {linear}, {confidence}, {quadratic}')
 
             cond_dict = make_cond_dict(
                 text=chunk,

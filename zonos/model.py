@@ -229,6 +229,8 @@ class Zonos(nn.Module):
         # callback: Callable[[torch.Tensor, int, int], bool] | None = None,
     ):
         assert cfg_scale != 1, "TODO: add support for cfg_scale=1"
+        if cfg_scale == 1:
+            print("Warning: cfg_scale=1 is not supported yet. Using cfg_scale=2 instead.")
         prefix_audio_len = 0 if audio_prefix_codes is None else audio_prefix_codes.shape[2]
         device = self.device
 

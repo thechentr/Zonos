@@ -220,7 +220,29 @@ def build_interface():
                     language=language.value,
                     speaker_audio=speaker_audio.value,
                 ):
-                    pass
+                    break
+        
+        import time
+        # 测量100次生成第一帧的时间
+        num_iterations = 100
+        total_time = 0.0
+
+        for i in range(num_iterations):
+            start = time.perf_counter()
+            # 只生成第一帧
+            for frame in generate_audio(
+                text=text.value,
+                language=language.value,
+                speaker_audio=speaker_audio.value,
+            ):
+                # 取到第一帧就退出循环
+                break
+            print('.', end='')
+            end = time.perf_counter()
+            total_time += (end - start)
+
+        avg_time = total_time / num_iterations
+        print(f"平均生成第一帧音频的时间: {avg_time:.4f} 秒")
 
 
         # Generate audio on button click

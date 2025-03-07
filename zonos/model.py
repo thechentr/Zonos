@@ -269,13 +269,13 @@ class Zonos(nn.Module):
         stopping = torch.zeros(batch_size, dtype=torch.bool, device=device)
         max_steps = delayed_codes.shape[2] - offset
         remaining_steps = torch.full((batch_size,), max_steps, device=device)
-        progress = tqdm(total=max_steps, desc="Generating", disable=not progress_bar)
+        # progress = tqdm(total=max_steps, desc="Generating", disable=not progress_bar)
         cfg_scale = torch.tensor(cfg_scale)
 
-        step = 0
+        # step = 0
         while torch.max(remaining_steps) > 0:
             offset += 1
-            input_ids = delayed_codes[..., offset - 1 : offset]  # 只用前
+            input_ids = delayed_codes[..., offset - 1 : offset]
             logits = decode_one_token(input_ids, inference_params, cfg_scale, allow_cudagraphs=cg)
             logits += logit_bias
 
@@ -301,8 +301,8 @@ class Zonos(nn.Module):
             remaining_steps -= 1
 
             # progress.update()
-            step += 1
-            print(step)
+            # step += 1
+            # print(step)
 
             if offset > 9: # num_codebooks is 9
                 # 截取当前已生成的部分，形状为 [batch, num_codebooks, offset]

@@ -247,7 +247,6 @@ def generate_audio(
                 if wav_chunk.dim() == 2 and wav_chunk.size(0) > 1:
                     wav_chunk = wav_chunk[0:1, :]
                 wav_chunk = (wav_chunk.squeeze().numpy() * 32767).astype('int16')
-                print(f"wav_chunk: {wav_chunk.shape}")
                 # yield 当前 chunk 解码后的音频片段
                 yield (sr_out, wav_chunk)
 

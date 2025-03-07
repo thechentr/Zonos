@@ -301,8 +301,8 @@ class Zonos(nn.Module):
             remaining_steps -= 1
 
             # progress.update()
-            step += 1
-            print(step)
+            # step += 1
+            # print(step)
 
             # if callback is not None and not callback(frame, step, max_steps):
             #     break

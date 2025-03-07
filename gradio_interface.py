@@ -232,15 +232,16 @@ def generate_audio(
                 sampling_params=dict(top_p=top_p, top_k=top_k, min_p=min_p, linear=linear, conf=confidence, quad=quadratic),
                 # callback=update_progress,
             )
-
+        print(codes.shape)
         with Timer('decode'):
-            wav_out = selected_model.autoencoder.decode(codes).cpu().detach()
-            sr_out = selected_model.autoencoder.sampling_rate
-            if wav_out.dim() == 2 and wav_out.size(0) > 1:
-                wav_out = wav_out[0:1, :]
-            wav_out = wav_out.squeeze().numpy()
-            wav_out = (wav_out * 32767).astype('int16')
-            yield (sr_out, wav_out) 
+            for code in codes:
+                wav_out = selected_model.autoencoder.decode(code.unsqueeze(0)).cpu().detach()
+                sr_out = selected_model.autoencoder.sampling_rate
+                if wav_out.dim() == 2 and wav_out.size(0) > 1:
+                    wav_out = wav_out[0:1, :]
+                wav_out = wav_out.squeeze().numpy()
+                wav_out = (wav_out * 32767).astype('int16')
+                yield (sr_out, wav_out)
 
 def build_interface():
     # if "hybrid" in ZonosBackbone.supported_architectures:

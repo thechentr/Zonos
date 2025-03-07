@@ -221,26 +221,46 @@ def generate_audio(
         # def update_progress(_frame: torch.Tensor, step: int, _total_steps: int) -> bool:
             # progress((step, estimated_total_steps))
             # return True
+        # 用于存储累计的 token 列表，每个 token 的形状假设为 [batch, num_codebooks]
+        token_generator = selected_model.generate(
+            prefix_conditioning=conditioning,
+            audio_prefix_codes=audio_prefix_codes,
+            max_new_tokens=max_new_tokens,
+            cfg_scale=cfg_scale,
+            batch_size=1,
+            sampling_params=dict(top_p=top_p, top_k=top_k, min_p=min_p, linear=linear, conf=confidence, quad=quad),
+        )
 
-        with Timer('generate'):
-            codes = selected_model.generate(
-                prefix_conditioning=conditioning,
-                audio_prefix_codes=audio_prefix_codes,
-                max_new_tokens=max_new_tokens,
-                cfg_scale=cfg_scale,
-                batch_size=1,
-                sampling_params=dict(top_p=top_p, top_k=top_k, min_p=min_p, linear=linear, conf=confidence, quad=quadratic),
-                # callback=update_progress,
-            )
+        chunk_size = 10
+        accumulated_tokens = []
 
-        with Timer('decode'):
-            wav_out = selected_model.autoencoder.decode(codes).cpu().detach()
-            sr_out = selected_model.autoencoder.sampling_rate
-            if wav_out.dim() == 2 and wav_out.size(0) > 1:
-                wav_out = wav_out[0:1, :]
-            wav_out = wav_out.squeeze().numpy()
-            wav_out = (wav_out * 32767).astype('int16')
-            yield (sr_out, wav_out) 
+        for token in token_generator:
+            accumulated_tokens.append(token)
+            # 每当累计的 token 数达到 chunk_size 时，组合并解码
+            if len(accumulated_tokens) == chunk_size:
+                # 将 list 中的 token 沿新的最后一维堆叠，形状为 [batch, num_codebooks, chunk_size]
+                chunk_codes = torch.stack(accumulated_tokens, dim=-1)
+                # 调用 autoencoder 进行解码，返回音频 tensor（假设形状为 [batch, 1, samples]）
+                wav_chunk = selected_model.autoencoder.decode(chunk_codes).cpu().detach()
+                # 若需要对输出进行 squeeze 处理（例如去除 batch 或 channel 维度），可以：
+                if wav_chunk.dim() == 2 and wav_chunk.size(0) > 1:
+                    wav_chunk = wav_chunk[0:1, :]
+                wav_chunk = (wav_chunk.squeeze().numpy() * 32767).astype('int16')
+                # yield 当前 chunk 解码后的音频片段
+                yield wav_chunk
+
+                # 清空累积 token 列表，准备下一组
+                accumulated_tokens = []
+            
+            # 若循环结束后还有不足 chunk_size 的 token，仍然解码输出
+            if accumulated_tokens:
+                chunk_codes = torch.stack(accumulated_tokens, dim=-1)
+                wav_chunk = selected_model.autoencoder.decode(chunk_codes).cpu().detach()
+                if wav_chunk.dim() == 2 and wav_chunk.size(0) > 1:
+                    wav_chunk = wav_chunk[0:1, :]
+                wav_chunk = (wav_chunk.squeeze().numpy() * 32767).astype('int16')
+                yield wav_chunk
+
 
 def build_interface():
     # if "hybrid" in ZonosBackbone.supported_architectures:

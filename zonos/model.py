@@ -304,13 +304,23 @@ class Zonos(nn.Module):
             step += 1
             print(step)
 
+            if offset > self.num_codebooks:
+                # 截取当前已生成的部分，形状为 [batch, num_codebooks, offset]
+                partial_codes = delayed_codes[..., :offset]
+                # 对齐：得到形状 [batch, num_codebooks, offset - num_codebooks]
+                aligned_partial = revert_delay_pattern(partial_codes)
+                # 提取最新生成的 token，即最后一列，形状 [batch, num_codebooks]
+                new_aligned_token = aligned_partial[..., -1]
+                # yield 这个对齐后的 token（每个 token 包含所有码本的信息）
+                yield new_aligned_token
+
             # if callback is not None and not callback(frame, step, max_steps):
             #     break
 
-        out_codes = revert_delay_pattern(delayed_codes)
-        out_codes.masked_fill_(out_codes >= 1024, 0)
-        out_codes = out_codes[..., : offset - 9]
+        # out_codes = revert_delay_pattern(delayed_codes)
+        # out_codes.masked_fill_(out_codes >= 1024, 0)
+        # out_codes = out_codes[..., : offset - 9]
 
-        self._cg_graph = None  # reset cuda graph to avoid cache changes
+        # self._cg_graph = None  # reset cuda graph to avoid cache changes
 
-        return out_codes
+        # return out_codes

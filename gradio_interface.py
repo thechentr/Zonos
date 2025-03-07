@@ -115,7 +115,7 @@ def generate_audio(
     confidence,
     quadratic,
     unconditional_keys,
-    # progress=gr.Progress(),
+    chunk_size = 100
 ):
     """
     Generates audio based on the provided UI parameters.
@@ -165,103 +165,79 @@ def generate_audio(
     vq_val = float(vq_single)
     vq_tensor = torch.tensor([vq_val] * 8, device=device).unsqueeze(0)
 
-    def split_text(text):
 
-        pattern = r'(.+?[\p{P}]+)(?:\s+|$)'
-        sentences = regex.findall(pattern, text)
-        
-        # 如果文本最后没有标点符号，regex.findall 不会捕获最后一段，这里补充处理
-        remainder = regex.sub(pattern, '', text).strip()
-        if remainder:
-            sentences.append(remainder)
-        
-        return sentences
-    
-    # text_chunks = split_text(text)
-    text_chunks = [text]
+    print(f"text: {text}")
+    # print(f"language: {language}")
+    # if SPEAKER_EMBEDDING is not None:
+    #     print(f"speaker: {SPEAKER_EMBEDDING.shape}")
+    # if emotion_tensor is not None:
+    #     print(f"emotion: {emotion_tensor.shape}")
+    # if vq_tensor is not None:
+    #     print(f"vqscore_8: {vq_tensor.shape}")
+    # print(f"fmax: {fmax}")
+    # print(f"pitch_std: {pitch_std}")
+    # print(f"speaking_rate: {speaking_rate}")
+    # print(f"dnsmos_ovrl: {dnsmos_ovrl}")
+    # print(f"speaker_noised: {speaker_noised_bool}")
+    # print(f"unconditional_keys: {unconditional_keys}")
+    # print(f'cfg_scale: {cfg_scale}')
+    # print(f'top_p, top_k, min_p, linear, confidence, quadratic: {top_p}, {top_k}, {min_p}, {linear}, {confidence}, {quadratic}')
 
-    for chunk in text_chunks:
+    cond_dict = make_cond_dict(
+        text=text,
+        language=language,
+        speaker=SPEAKER_EMBEDDING,
+        emotion=emotion_tensor,
+        vqscore_8=vq_tensor,
+        fmax=fmax,
+        pitch_std=pitch_std,
+        speaking_rate=speaking_rate,
+        dnsmos_ovrl=dnsmos_ovrl,
+        speaker_noised=speaker_noised_bool,
+        device=device,
+        unconditional_keys=unconditional_keys,
+    )
+    conditioning = selected_model.prepare_conditioning(cond_dict)
 
-        with Timer('cond_dict'):
-            print(f"text: {chunk}")
-            # print(f"language: {language}")
-            # if SPEAKER_EMBEDDING is not None:
-            #     print(f"speaker: {SPEAKER_EMBEDDING.shape}")
-            # if emotion_tensor is not None:
-            #     print(f"emotion: {emotion_tensor.shape}")
-            # if vq_tensor is not None:
-            #     print(f"vqscore_8: {vq_tensor.shape}")
-            # print(f"fmax: {fmax}")
-            # print(f"pitch_std: {pitch_std}")
-            # print(f"speaking_rate: {speaking_rate}")
-            # print(f"dnsmos_ovrl: {dnsmos_ovrl}")
-            # print(f"speaker_noised: {speaker_noised_bool}")
-            # print(f"unconditional_keys: {unconditional_keys}")
-            # print(f'cfg_scale: {cfg_scale}')
-            # print(f'top_p, top_k, min_p, linear, confidence, quadratic: {top_p}, {top_k}, {min_p}, {linear}, {confidence}, {quadratic}')
+    # 用于存储累计的 token 列表，每个 token 的形状假设为 [batch, num_codebooks]
+    token_generator = selected_model.generate(
+        prefix_conditioning=conditioning,
+        audio_prefix_codes=audio_prefix_codes,
+        max_new_tokens=max_new_tokens,
+        cfg_scale=cfg_scale,
+        batch_size=1,
+        sampling_params=dict(top_p=top_p, top_k=top_k, min_p=min_p, linear=linear, conf=confidence, quad=quadratic),
+    )
 
-            cond_dict = make_cond_dict(
-                text=chunk,
-                language=language,
-                speaker=SPEAKER_EMBEDDING,
-                emotion=emotion_tensor,
-                vqscore_8=vq_tensor,
-                fmax=fmax,
-                pitch_std=pitch_std,
-                speaking_rate=speaking_rate,
-                dnsmos_ovrl=dnsmos_ovrl,
-                speaker_noised=speaker_noised_bool,
-                device=device,
-                unconditional_keys=unconditional_keys,
-            )
-            conditioning = selected_model.prepare_conditioning(cond_dict)
+    accumulated_tokens = []
+    sr_out = selected_model.autoencoder.sampling_rate
 
-        # estimated_generation_duration = 30 * len(chunk) / 400
-        # estimated_total_steps = int(estimated_generation_duration * 86)
-
-        # def update_progress(_frame: torch.Tensor, step: int, _total_steps: int) -> bool:
-            # progress((step, estimated_total_steps))
-            # return True
-        # 用于存储累计的 token 列表，每个 token 的形状假设为 [batch, num_codebooks]
-        token_generator = selected_model.generate(
-            prefix_conditioning=conditioning,
-            audio_prefix_codes=audio_prefix_codes,
-            max_new_tokens=max_new_tokens,
-            cfg_scale=cfg_scale,
-            batch_size=1,
-            sampling_params=dict(top_p=top_p, top_k=top_k, min_p=min_p, linear=linear, conf=confidence, quad=quadratic),
-        )
-
-        chunk_size = 100
-        accumulated_tokens = []
-        sr_out = selected_model.autoencoder.sampling_rate
-
-        for token in token_generator:
-            accumulated_tokens.append(token)
-            # 每当累计的 token 数达到 chunk_size 时，组合并解码
-            if len(accumulated_tokens) == chunk_size:
-                # 将 list 中的 token 沿新的最后一维堆叠，形状为 [batch, num_codebooks, chunk_size]
-                chunk_codes = torch.stack(accumulated_tokens, dim=-1)
-                # 调用 autoencoder 进行解码，返回音频 tensor（假设形状为 [batch, 1, samples]）
-                wav_chunk = selected_model.autoencoder.decode(chunk_codes).cpu().detach()
-                # 若需要对输出进行 squeeze 处理（例如去除 batch 或 channel 维度），可以：
-                if wav_chunk.dim() == 2 and wav_chunk.size(0) > 1:
-                    wav_chunk = wav_chunk[0:1, :]
-                wav_chunk = (wav_chunk.squeeze().numpy() * 32767).astype('int16')
-                # yield 当前 chunk 解码后的音频片段
-                yield (sr_out, wav_chunk)
-
-                # 清空累积 token 列表，准备下一组
-                accumulated_tokens = []
-            
-        # 若循环结束后还有不足 chunk_size 的 token，仍然解码输出
-        if accumulated_tokens:
+    for token in token_generator:
+        accumulated_tokens.append(token)
+        # 每当累计的 token 数达到 chunk_size 时，组合并解码
+        if len(accumulated_tokens) == chunk_size:
+            # 将 list 中的 token 沿新的最后一维堆叠，形状为 [batch, num_codebooks, chunk_size]
             chunk_codes = torch.stack(accumulated_tokens, dim=-1)
+            # 调用 autoencoder 进行解码，返回音频 tensor（假设形状为 [batch, 1, samples]）
             wav_chunk = selected_model.autoencoder.decode(chunk_codes).cpu().detach()
+            # 若需要对输出进行 squeeze 处理（例如去除 batch 或 channel 维度），可以：
             if wav_chunk.dim() == 2 and wav_chunk.size(0) > 1:
                 wav_chunk = wav_chunk[0:1, :]
             wav_chunk = (wav_chunk.squeeze().numpy() * 32767).astype('int16')
+            # yield 当前 chunk 解码后的音频片段
             yield (sr_out, wav_chunk)
+
+            # 清空累积 token 列表，准备下一组
+            accumulated_tokens = []
+        
+    # 若循环结束后还有不足 chunk_size 的 token，仍然解码输出
+    if accumulated_tokens:
+        chunk_codes = torch.stack(accumulated_tokens, dim=-1)
+        wav_chunk = selected_model.autoencoder.decode(chunk_codes).cpu().detach()
+        if wav_chunk.dim() == 2 and wav_chunk.size(0) > 1:
+            wav_chunk = wav_chunk[0:1, :]
+        wav_chunk = (wav_chunk.squeeze().numpy() * 32767).astype('int16')
+        yield (sr_out, wav_chunk)
 
 
 def build_interface():

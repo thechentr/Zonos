@@ -173,9 +173,22 @@ def generate_audio(
 
     for chunk in text_chunks:
 
-        print(chunk, SPEAKER_EMBEDDING.shape, emotion_tensor.shape, vq_tensor.shape)
-
         with Timer('cond_dict'):
+            print(f"text: {chunk}")
+            print(f"language: {language}")
+            if SPEAKER_EMBEDDING is not None:
+                print(f"speaker: {SPEAKER_EMBEDDING.shape}")
+            if emotion_tensor is not None:
+                print(f"emotion: {emotion_tensor.shape}")
+            if vq_tensor is not None:
+                print(f"vqscore_8: {vq_tensor.shape}")
+            print(f"fmax: {fmax}")
+            print(f"pitch_std: {pitch_std}")
+            print(f"speaking_rate: {speaking_rate}")
+            print(f"dnsmos_ovrl: {dnsmos_ovrl}")
+            print(f"speaker_noised: {speaker_noised_bool}")
+            print(f"unconditional_keys: {unconditional_keys}")
+
             cond_dict = make_cond_dict(
                 text=chunk,
                 language=language,
@@ -191,10 +204,6 @@ def generate_audio(
                 unconditional_keys=unconditional_keys,
             )
             conditioning = selected_model.prepare_conditioning(cond_dict)
-
-        print(type(conditioning))
-        if isinstance(conditioning, torch.Tensor):
-            print(conditioning.shape)
 
         # estimated_generation_duration = 30 * len(chunk) / 400
         # estimated_total_steps = int(estimated_generation_duration * 86)
@@ -220,6 +229,7 @@ def generate_audio(
             if wav_out.dim() == 2 and wav_out.size(0) > 1:
                 wav_out = wav_out[0:1, :]
             wav_out = wav_out.squeeze().numpy()
+            wav_out = (wav_out * 32767).astype('int16')
             yield (sr_out, wav_out) 
 
 def build_interface():

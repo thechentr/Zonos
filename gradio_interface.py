@@ -167,21 +167,21 @@ def generate_audio(
 
 
     print(f"text: {text}")
-    # print(f"language: {language}")
-    # if SPEAKER_EMBEDDING is not None:
-    #     print(f"speaker: {SPEAKER_EMBEDDING.shape}")
-    # if emotion_tensor is not None:
-    #     print(f"emotion: {emotion_tensor.shape}")
-    # if vq_tensor is not None:
-    #     print(f"vqscore_8: {vq_tensor.shape}")
-    # print(f"fmax: {fmax}")
-    # print(f"pitch_std: {pitch_std}")
-    # print(f"speaking_rate: {speaking_rate}")
-    # print(f"dnsmos_ovrl: {dnsmos_ovrl}")
-    # print(f"speaker_noised: {speaker_noised_bool}")
-    # print(f"unconditional_keys: {unconditional_keys}")
-    # print(f'cfg_scale: {cfg_scale}')
-    # print(f'top_p, top_k, min_p, linear, confidence, quadratic: {top_p}, {top_k}, {min_p}, {linear}, {confidence}, {quadratic}')
+    print(f"language: {language}")
+    if SPEAKER_EMBEDDING is not None:
+        print(f"speaker: {SPEAKER_EMBEDDING.shape}")
+    if emotion_tensor is not None:
+        print(f"emotion: {emotion_tensor.shape}")
+    if vq_tensor is not None:
+        print(f"vqscore_8: {vq_tensor.shape}")
+    print(f"fmax: {fmax}")
+    print(f"pitch_std: {pitch_std}")
+    print(f"speaking_rate: {speaking_rate}")
+    print(f"dnsmos_ovrl: {dnsmos_ovrl}")
+    print(f"speaker_noised: {speaker_noised_bool}")
+    print(f"unconditional_keys: {unconditional_keys}")
+    print(f'cfg_scale: {cfg_scale}')
+    print(f'top_p, top_k, min_p, linear, confidence, quadratic: {top_p}, {top_k}, {min_p}, {linear}, {confidence}, {quadratic}')
 
     cond_dict = make_cond_dict(
         text=text,

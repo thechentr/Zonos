@@ -311,6 +311,7 @@ class Zonos(nn.Module):
                 aligned_partial = revert_delay_pattern(partial_codes)
                 # 提取最新生成的 token，即最后一列，形状 [batch, num_codebooks]
                 new_aligned_token = aligned_partial[..., -1]
+                new_aligned_token = new_aligned_token.masked_fill(new_aligned_token >= 1024, 0)
                 # yield 这个对齐后的 token（每个 token 包含所有码本的信息）
                 yield new_aligned_token
 

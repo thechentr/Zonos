@@ -53,7 +53,7 @@ def generate_audio(
     confidence=0.4,
     quadratic=0,
     unconditional_keys=[],
-    chunk_size = 100
+    chunk_size = 50
 ):
     """
     Generates audio based on the provided UI parameters.
@@ -231,10 +231,10 @@ def build_interface():
                 text=text.value,
                 language=language.value,
                 speaker_audio=speaker_audio.value,
+                checkSize=200
             ):
                 # 取到第一帧就退出循环
                 break
-            print('.', end='')
             end = time.perf_counter()
             total_time += (end - start)
 

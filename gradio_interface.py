@@ -9,33 +9,29 @@ from zonos.utils import DEFAULT_DEVICE as device
 from timer import Timer
 import numpy as np
 
-CURRENT_MODEL_TYPE = None
+CURRENT_MODEL_TYPE = "Zyphra/Zonos-v0.1-transformer"
 CURRENT_MODEL = None
 
 SPEAKER_EMBEDDING = None
 SPEAKER_AUDIO_PATH = None
 
 
-def load_model_if_needed(model_choice: str):
-    global CURRENT_MODEL_TYPE, CURRENT_MODEL
-    if CURRENT_MODEL_TYPE != model_choice:
-        if CURRENT_MODEL is not None:
-            del CURRENT_MODEL
-            torch.cuda.empty_cache()
-        print(f"Loading {model_choice} model...")
-        CURRENT_MODEL = Zonos.from_pretrained(model_choice, device=device)
+def load_model_if_needed():
+    global CURRENT_MODEL
+    if CURRENT_MODEL is None:
+        print(f"Loading {CURRENT_MODEL_TYPE} model...")
+        CURRENT_MODEL = Zonos.from_pretrained(CURRENT_MODEL_TYPE, device=device)
         CURRENT_MODEL.requires_grad_(False).eval()
-        CURRENT_MODEL_TYPE = model_choice
-        print(f"{model_choice} model loaded successfully!")
+        print(f"{CURRENT_MODEL_TYPE} model loaded successfully!")
     return CURRENT_MODEL
 
 
-def update_ui(model_choice):
+def update_ui():
     """
     Dynamically show/hide UI elements based on the model's conditioners.
     We do NOT display 'language_id' or 'ctc_loss' even if they exist in the model.
     """
-    model = load_model_if_needed(model_choice)
+    model = load_model_if_needed()
     cond_names = [c.name for c in model.prefix_conditioner.conditioners]
     print("Conditioners in this model:", cond_names)
 
@@ -85,7 +81,6 @@ def update_ui(model_choice):
 
 
 def generate_audio(
-    model_choice,
     text,
     language,
     speaker_audio,
@@ -119,7 +114,7 @@ def generate_audio(
     We do NOT use language_id or ctc_loss even if the model has them.
     """
     with Timer('load model'):
-        selected_model = load_model_if_needed(model_choice)
+        selected_model = load_model_if_needed()
 
     speaker_noised_bool = bool(speaker_noised)
     fmax = float(fmax)
@@ -230,8 +225,6 @@ def build_interface():
     #         "| This probably means the mamba-ssm library has not been installed."
     #     )
 
-    model_choice = "Zyphra/Zonos-v0.1-transformer"
-
     with gr.Blocks() as demo:
         with gr.Row():
             with gr.Column():
@@ -332,7 +325,7 @@ def build_interface():
         # On page load, trigger the same UI refresh
         demo.load(
             fn=update_ui,
-            inputs=[model_choice],
+            inputs=[],
             outputs=[
                 text,
                 language,
@@ -360,7 +353,6 @@ def build_interface():
         generate_button.click(
             fn=generate_audio,
             inputs=[
-                model_choice,
                 text,
                 language,
                 speaker_audio,

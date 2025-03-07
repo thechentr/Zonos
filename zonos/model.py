@@ -272,10 +272,10 @@ class Zonos(nn.Module):
         progress = tqdm(total=max_steps, desc="Generating", disable=not progress_bar)
         cfg_scale = torch.tensor(cfg_scale)
 
-        step = 0
+        # step = 0
         while torch.max(remaining_steps) > 0:
             offset += 1
-            input_ids = delayed_codes[..., offset - 1 : offset]
+            input_ids = delayed_codes[..., offset - 1 : offset]  # 只用前
             logits = decode_one_token(input_ids, inference_params, cfg_scale, allow_cudagraphs=cg)
             logits += logit_bias
 
@@ -300,11 +300,11 @@ class Zonos(nn.Module):
 
             remaining_steps -= 1
 
-            progress.update()
-            step += 1
+            # progress.update()
+            # step += 1
 
-            if callback is not None and not callback(frame, step, max_steps):
-                break
+            # if callback is not None and not callback(frame, step, max_steps):
+            #     break
 
         out_codes = revert_delay_pattern(delayed_codes)
         out_codes.masked_fill_(out_codes >= 1024, 0)

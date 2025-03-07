@@ -115,7 +115,7 @@ def generate_audio(
     confidence,
     quadratic,
     unconditional_keys,
-    chunk_size = 100
+    chunk_size
 ):
     """
     Generates audio based on the provided UI parameters.
@@ -288,6 +288,7 @@ def build_interface():
             with gr.Column():
                 gr.Markdown("## Generation Parameters")
                 cfg_scale_slider = gr.Slider(1.0, 5.0, 2.0, 0.1, label="CFG Scale")
+                chunk_size_slider = gr.Slider(1, 1000, 100, 1, label="CFG Scale")
 
         with gr.Accordion("Sampling", open=False):
             with gr.Row():
@@ -403,6 +404,7 @@ def build_interface():
                 confidence_slider,
                 quadratic_slider,
                 unconditional_keys,
+                chunk_size_slider,
             ],
             outputs=[output_audio],
         )

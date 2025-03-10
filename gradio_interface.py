@@ -13,14 +13,13 @@ import regex
 
 import logging
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s', filename='gradio_interface.log')
 
 CURRENT_MODEL_TYPE = "Zyphra/Zonos-v0.1-transformer"
 CURRENT_MODEL = None
 
-wav, sr = torchaudio.load(os.path.join("assets", "voice.wav"))
 
-SPEAKER_AUDIO_PATH = os.path.join("assets", "voice.wav")
+SPEAKER_AUDIO_PATH = None
 SPEAKER_EMBEDDING = None
 
 
@@ -99,7 +98,7 @@ def generate_audio(
 
     if speaker_audio is not None and SPEAKER_AUDIO_PATH != speaker_audio:
         print("Computed speaker embedding")
-        wav, sr = torchaudio.load(speaker_audio)
+        wav, sr = torchaudio.load(os.path.join("assets", speaker_audio))
         SPEAKER_EMBEDDING = selected_model.make_speaker_embedding(wav, sr)
         SPEAKER_EMBEDDING = SPEAKER_EMBEDDING.to(device, dtype=torch.bfloat16)
         SPEAKER_AUDIO_PATH = speaker_audio
@@ -202,6 +201,7 @@ def build_interface():
                 speaker_audio = gr.Audio(
                     label="Optional Speaker Audio (for cloning)",
                     type="filepath",
+                    value="voice.wav",
                 )
 
 

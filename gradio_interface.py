@@ -11,6 +11,10 @@ from timer import Timer
 import numpy as np
 import regex
 
+import logging
+
+logging.basicConfig(level=logging.INFO)
+
 CURRENT_MODEL_TYPE = "Zyphra/Zonos-v0.1-transformer"
 CURRENT_MODEL = None
 
@@ -121,6 +125,18 @@ def generate_audio(
     Generates audio based on the provided UI parameters.
     We do NOT use language_id or ctc_loss even if the model has them.
     """
+    logging.info(f"text: {text}")
+    logging.info(f"language: {language}")
+    logging.info(f"speaker_audio: {speaker_audio}")
+    logging.info(f"prefix_audio: {prefix_audio}")
+    logging.info(f"e1: {e1}, e2: {e2}, e3: {e3}, e4: {e4}, e5: {e5}, e6: {e6}, e7: {e7}, e8: {e8}")
+    logging.info(f"vq_single: {vq_single}")
+    logging.info(f"fmax: {fmax}, pitch_std: {pitch_std}, speaking_rate: {speaking_rate}")
+    logging.info(f"dnsmos_ovrl: {dnsmos_ovrl}, speaker_noised: {speaker_noised}")
+    logging.info(f"cfg_scale: {cfg_scale}, top_p: {top_p}, top_k: {top_k}, min_p: {min_p}")
+    logging.info(f"linear: {linear}, confidence: {confidence}, quadratic: {quadratic}")
+    logging.info(f"unconditional_keys: {unconditional_keys}, chunk_size: {chunk_size}")
+
     with Timer('load model'):
         selected_model = load_model_if_needed()
 
@@ -164,24 +180,6 @@ def generate_audio(
 
     vq_val = float(vq_single)
     vq_tensor = torch.tensor([vq_val] * 8, device=device).unsqueeze(0)
-
-
-    print(f"text: {text}")
-    # print(f"language: {language}")
-    # if SPEAKER_EMBEDDING is not None:
-    #     print(f"speaker: {SPEAKER_EMBEDDING.shape}")
-    # if emotion_tensor is not None:
-    #     print(f"emotion: {emotion_tensor.shape}")
-    # if vq_tensor is not None:
-    #     print(f"vqscore_8: {vq_tensor.shape}")
-    # print(f"fmax: {fmax}")
-    # print(f"pitch_std: {pitch_std}")
-    # print(f"speaking_rate: {speaking_rate}")
-    # print(f"dnsmos_ovrl: {dnsmos_ovrl}")
-    # print(f"speaker_noised: {speaker_noised_bool}")
-    # print(f"unconditional_keys: {unconditional_keys}")
-    # print(f'cfg_scale: {cfg_scale}')
-    # print(f'top_p, top_k, min_p, linear, confidence, quadratic: {top_p}, {top_k}, {min_p}, {linear}, {confidence}, {quadratic}')
 
     cond_dict = make_cond_dict(
         text=text,

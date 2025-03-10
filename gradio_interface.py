@@ -52,7 +52,7 @@ def generate_audio(
     linear=0.5,
     confidence=0.4,
     quadratic=0,
-    unconditional_keys=[],
+    unconditional_keys=['emotions'],
     chunk_size = 50
 ):
     """
@@ -231,7 +231,7 @@ def build_interface():
                 text=text.value,
                 language=language.value,
                 speaker_audio=speaker_audio.value,
-                checkSize=200
+                chunk_size=200
             ):
                 # 取到第一帧就退出循环
                 break

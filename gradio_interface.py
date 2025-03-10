@@ -286,7 +286,7 @@ def build_interface():
             with gr.Column():
                 gr.Markdown("## Generation Parameters")
                 cfg_scale_slider = gr.Slider(1.0, 5.0, 2.0, 0.1, label="CFG Scale")
-                chunk_size_slider = gr.Slider(1, 1000, 100, 1, label="CFG Scale")
+                chunk_size_slider = gr.Slider(1, 1000, 100, 1, label="Chunk Size")
 
         with gr.Accordion("Sampling", open=False):
             with gr.Row():

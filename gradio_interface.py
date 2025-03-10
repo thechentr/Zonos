@@ -26,15 +26,21 @@ SPEAKER_EMBEDDING = None
 def load_model_if_needed():
     global CURRENT_MODEL, SPEAKER_EMBEDDING
     if CURRENT_MODEL is None:
-        print(f"Loading {CURRENT_MODEL_TYPE} model...")
+        logging.info(f"Loading model {CURRENT_MODEL_TYPE}...")
         CURRENT_MODEL = Zonos.from_pretrained(CURRENT_MODEL_TYPE, device=device)
         CURRENT_MODEL.requires_grad_(False).eval()
-        print(f"{CURRENT_MODEL_TYPE} model loaded successfully!")
+        logging.info(f"{CURRENT_MODEL_TYPE} model loaded successfully!")
 
-    wav, sr = torchaudio.load(SPEAKER_AUDIO_PATH)
-    SPEAKER_EMBEDDING = CURRENT_MODEL.make_speaker_embedding(wav, sr)
-    SPEAKER_EMBEDDING = SPEAKER_EMBEDDING.to(device, dtype=torch.bfloat16)
-    return CURRENT_MODEL
+
+def load_speaker_embedding(speaker_audio):
+    global SPEAKER_AUDIO_PATH, SPEAKER_EMBEDDING
+    if SPEAKER_AUDIO_PATH != speaker_audio:
+        logging.info(f"Loading speaker audio {speaker_audio}...")
+        SPEAKER_AUDIO_PATH = speaker_audio
+        wav, sr = torchaudio.load(os.path.join("assets", speaker_audio))
+        SPEAKER_EMBEDDING = CURRENT_MODEL.make_speaker_embedding(wav, sr)
+        SPEAKER_EMBEDDING = SPEAKER_EMBEDDING.to(device, dtype=torch.bfloat16)
+        logging.info(f"Speaker audio {speaker_audio} loaded successfully!")
 
 def generate_audio(
     text,
@@ -203,6 +209,7 @@ def build_interface():
                     type="filepath",
                     value="voice.wav",
                 )
+                load_speaker_embedding(speaker_audio.value)
 
 
         with gr.Column():
@@ -242,8 +249,10 @@ def build_interface():
 
         # avg_time = total_time / num_iterations
         # print(f"平均生成第一帧音频的时间: {avg_time:.4f} 秒")
-
-        generate_audio(text, language, speaker_audio)
+        speaker_audio.change(
+            fn=load_speaker_embedding,
+            inputs=[speaker_audio],
+        )
 
 
         # Generate audio on button click
